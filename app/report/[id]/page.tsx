@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { TrendingUp, TrendingDown, Wallet, PiggyBank, CreditCard, Users, FileText, ArrowLeft } from "lucide-react";
+import { TrendingUp, TrendingDown, Wallet, PiggyBank, CreditCard, Users, FileText, ArrowLeft, AlertCircle } from "lucide-react";
 import Link from "next/link";
 // --- HAPUS --- Impor Recharts tidak lagi diperlukan
 // import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
@@ -47,12 +47,34 @@ async function fetchTransactions(id: string): Promise<Transaction[]> {
       cache: 'no-store',
       headers: { 'Content-Type': 'application/json' },
     });
-    if (!response.ok) throw new Error(`Failed to fetch transactions: ${response.status}`);
+    if (!response.ok) {
+      if (response.status === 404) {
+        throw new Error('Sheet ID tidak ditemukan atau belum terdaftar.');
+      }
+      throw new Error(`Gagal mengambil data transaksi: ${response.status}`);
+    }
+
     const data: Transaction[] = await response.json();
-    return data.filter(transaction => !transaction.Exclude);
+    
+    // Get the date 3 months ago
+    const threeMonthsAgo = new Date();
+    threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
+
+    return data.filter(transaction => {
+      const transactionDate = new Date(transaction.Date);
+      return !transaction.Exclude && transactionDate >= threeMonthsAgo;
+    });
   } catch (error) {
+    // Check for specific error messages related to JSON parsing failure
+    if (error instanceof Error && (
+        error.message.includes('Unexpected end of JSON input') ||
+        error.message.includes('JSON.parse') || // Catches SyntaxError from JSON.parse
+        error.message.startsWith('Sheet ID') // Our custom error
+    )) {
+      throw new Error('Sheet ID tidak ditemukan atau belum terdaftar.');
+    }
     console.error('Error fetching transactions:', error);
-    throw error;
+    throw new Error('Terjadi kesalahan saat mengambil data transaksi.'); // Generic fallback
   }
 }
 
@@ -64,7 +86,10 @@ async function fetchBalance(id: string): Promise<number> {
     });
     
     if (!response.ok) {
-      throw new Error(`Failed to fetch balance: ${response.status}`);
+      if (response.status === 404) {
+        throw new Error('Sheet ID tidak ditemukan atau belum terdaftar.');
+      }
+      throw new Error(`Gagal mengambil data saldo: ${response.status}`);
     }
     
     const data: any[] = await response.json(); 
@@ -245,13 +270,19 @@ export default function UserReportPage({ params }: { params: { id: string } }) {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-red-600 mb-4">Error: {error}</p>
-          <Link href="/report">
-            <Button>Kembali ke Dashboard</Button>
-          </Link>
-        </div>
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <Card className="w-full max-w-md text-center">
+          <CardHeader>
+            <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+            <CardTitle className="text-2xl font-bold text-red-600">Terjadi Kesalahan</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-gray-700 mb-6">{error}</p>
+            <Link href="/report">
+              <Button>Kembali ke Dashboard</Button>
+            </Link>
+          </CardContent>
+        </Card>
       </div>
     );
   }
