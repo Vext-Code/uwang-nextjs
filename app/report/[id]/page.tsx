@@ -211,7 +211,9 @@ export default function UserReportPage({ params }: { params: { id: string } }) {
         relativeTime: getRelativeMonth(d.month) // Panggil fungsi baru
       }));
 
-    const expenseByCategory = allTransactions
+    const monthFiltered = selectedMonth === 'all' ? allTransactions : allTransactions.filter(t => t.Date.startsWith(selectedMonth));
+
+    const expenseByCategory = monthFiltered
       .filter(t => ['expense', 'bills'].includes(t.Kind.toLowerCase()))
       .reduce((acc, t) => {
         const category = t.Category;
@@ -224,7 +226,6 @@ export default function UserReportPage({ params }: { params: { id: string } }) {
       .sort((a, b) => b.total - a.total)
       .slice(0, 5);
       
-    const monthFiltered = selectedMonth === 'all' ? allTransactions : allTransactions.filter(t => t.Date.startsWith(selectedMonth));
     const searchFiltered = monthFiltered.filter(t => t.Detail.toLowerCase().includes(searchTerm.toLowerCase()) || t.Category.toLowerCase().includes(searchTerm.toLowerCase()) || t.Wallet.toLowerCase().includes(searchTerm.toLowerCase()));
     const calculatedSummary = calculateSummary(monthFiltered, balance);
     const totalPages = Math.ceil(searchFiltered.length / ITEMS_PER_PAGE);
@@ -383,16 +384,6 @@ export default function UserReportPage({ params }: { params: { id: string } }) {
           </div>
         </Card>
       </div>
-
-      <footer className="py-8 bg-gray-900 text-white mt-16">
-        <div className="container mx-auto px-4 text-center">
-          <p className="text-sm text-gray-400">© 2025 uWAng! All rights reserved.</p>
-          <div className="flex justify-center space-x-6 mt-4">
-            <a href="#" className="text-sm text-gray-400 hover:text-white transition-colors">Privasi</a>
-            <a href="#" className="text-sm text-gray-400 hover:text-white transition-colors">Syarat & Ketentuan</a>
-          </div>
-        </div>
-      </footer>
     </div>
   );
 }

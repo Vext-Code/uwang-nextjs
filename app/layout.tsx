@@ -9,6 +9,9 @@ const inter = Inter({ subsets: ['latin'] });
 export const metadata: Metadata = {
   title: 'uWAng!',
   description: 'Catat transaksi via WhatsApp',
+  icons: {
+    icon: '/favicon.png',
+  },
 };
 
 export default function RootLayout({
